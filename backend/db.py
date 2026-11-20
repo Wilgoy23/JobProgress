@@ -4,7 +4,8 @@ import os
 import sqlite3
 from pathlib import Path
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent / "data" / "jobprogress.db"
+# Where the database lived before it moved to the per-user app data folder.
+LEGACY_DB_PATH = Path(__file__).resolve().parent / "data" / "jobprogress.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -33,9 +34,33 @@ CREATE INDEX IF NOT EXISTS idx_status_history_job ON status_history(job_id, at);
 """
 
 
+def app_data_dir() -> Path:
+    """Per-user folder for app data, e.g. %LOCALAPPDATA%\\JobProgress on Windows."""
+    if os.name == "nt":
+        base = os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local"
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share"
+    return Path(base) / "JobProgress"
+
+
 def db_path() -> Path:
     """Database file location; override with the JOBPROGRESS_DB env var."""
-    return Path(os.environ.get("JOBPROGRESS_DB", DEFAULT_DB_PATH))
+    override = os.environ.get("JOBPROGRESS_DB")
+    return Path(override) if override else app_data_dir() / "jobprogress.db"
+
+
+def _migrate_legacy_db(target: Path) -> None:
+    """Copy backend/data/jobprogress.db to the new location once. The old file is left as a backup."""
+    if os.environ.get("JOBPROGRESS_DB") or target.exists() or not LEGACY_DB_PATH.is_file():
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    src = sqlite3.connect(LEGACY_DB_PATH)
+    dst = sqlite3.connect(target)
+    try:
+        src.backup(dst)  # safe even if the old file is open elsewhere
+    finally:
+        src.close()
+        dst.close()
 
 
 def connect() -> sqlite3.Connection:
@@ -48,6 +73,7 @@ def connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    _migrate_legacy_db(db_path())
     conn = connect()
     try:
         conn.executescript(SCHEMA)
