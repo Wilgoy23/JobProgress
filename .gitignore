@@ -4,8 +4,12 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# Your job data (local SQLite database)
+# Your job data (old location; it now lives in %LOCALAPPDATA%\JobProgress)
 backend/data/
+
+# Packaged app (build.bat)
+/build/
+/dist/
 
 # Frontend
 frontend/node_modules/

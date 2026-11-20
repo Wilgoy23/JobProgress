@@ -4,6 +4,7 @@ Run (from the backend folder):  python -m uvicorn main:app --reload
 """
 
 import sqlite3
+import sys
 import uuid
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -18,7 +19,10 @@ from pydantic import ValidationError
 from db import get_conn, init_db
 from schemas import ImportJob, ImportResult, JobCreate, JobOut, JobUpdate, to_utc_iso
 
-FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if getattr(sys, "frozen", False):  # running from the packaged JobProgress.exe
+    FRONTEND_DIST = Path(sys._MEIPASS) / "frontend_dist"
+else:
+    FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 JOB_COLUMNS = (
     "company", "role", "url", "status", "date_applied", "follow_up",
@@ -76,7 +80,7 @@ def add_history(conn: sqlite3.Connection, job_id: str, status: str, at: str) -> 
 # ---------------------------------------------------------------------------
 @app.get("/api/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "app": "JobProgress"}
 
 
 @app.get("/api/jobs", response_model=list[JobOut])
