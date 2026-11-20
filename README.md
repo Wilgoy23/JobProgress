@@ -13,6 +13,17 @@ A local tracker for job applications: a **React** frontend, a **Python (FastAPI)
 - **Backup:** export to JSON (re-importable) or CSV (opens in Excel / Google Sheets). Importing merges by id, so re-importing the same backup won't create duplicates.
 - Delete with undo, light and dark mode, mobile-friendly layout. Press **n** to add a job quickly.
 
+## Desktop app (double-click to run)
+
+Run **`build.bat`** once. It produces **`dist\JobProgress.exe`**, a single file you can double-click, pin to the taskbar or copy anywhere.
+
+- It opens the app in its own window (using Chrome or Edge in app mode, with no tabs or address bar).
+- Closing the window shuts everything down. Opening it again while it's running just brings up another window.
+- Run `build.bat` again after changing code to rebuild the exe.
+- Windows may show a SmartScreen warning the first time, because the exe isn't code-signed. Click **More info → Run anyway**.
+
+The rest of this README is about running from source for development.
+
 ## First-time setup
 
 You need Python 3.10+ and Node.js 18+.
@@ -62,14 +73,19 @@ Open **http://localhost:5173**.
 
 ## Where your data lives
 
-All data is in a single SQLite file: `backend/data/jobprogress.db` (created on first run, and ignored by git). To back it up, copy that file or use **Export JSON** in the app. Set the `JOBPROGRESS_DB` environment variable to keep the database somewhere else, e.g. a synced folder.
+All data is in a single SQLite file, **`%LOCALAPPDATA%\JobProgress\jobprogress.db`** (paste that into File Explorer's address bar). The desktop app and the dev server share it, and it isn't affected by moving or rebuilding the exe. To back it up, copy that file or use **Export JSON** in the app. Set the `JOBPROGRESS_DB` environment variable to keep the database somewhere else, e.g. a synced folder.
+
+Earlier versions kept the database in `backend/data/`; it's copied to the new location automatically the first time, and the old file is left as a backup.
 
 **Coming from the earlier browser-only version?** Use **Import** with a JSON file you exported from it; the old format is accepted.
 
 ## Project layout
 
 ```
+build.bat           Builds dist\JobProgress.exe
+assets/             App icon (.svg source, .ico for the exe)
 backend/
+  desktop.py        Entry point for the exe: starts the server, opens the app window
   main.py           FastAPI app: REST routes, serves frontend/dist if it exists
   db.py             SQLite connection + schema (jobs, status_history)
   schemas.py        Pydantic models and validation (URL normalization, etc.)
